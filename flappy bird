@@ -1,0 +1,98 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define TOUCH_PIN 4
+#define LED_PIN 2
+
+int birdX = 20;
+float birdY = 30;
+float velocity = 0;
+
+int pipeX = 128;
+int gapY = 20;
+
+int score = 0;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(TOUCH_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("OLED Failed");
+    while (1);
+  }
+
+  display.clearDisplay();
+  display.display();
+
+  randomSeed(millis());
+
+  Serial.println("Game Started");
+}
+
+void loop() {
+
+  // Touch = jump + LED ON
+  if (digitalRead(TOUCH_PIN)) {
+    velocity = -3.0;
+    digitalWrite(LED_PIN, HIGH);
+  } else {
+    digitalWrite(LED_PIN, LOW);
+  }
+
+  // Gravity
+  velocity += 0.25;
+  birdY += velocity;
+
+  // Move pipe
+  pipeX -= 2;
+
+  if (pipeX < -10) {
+    pipeX = SCREEN_WIDTH;
+    gapY = random(10, 35);
+    score++;
+  }
+
+  // Reset if bird goes outside screen
+  if (birdY < 0 || birdY > 63) {
+    birdY = 30;
+    velocity = 0;
+    score = 0;
+  }
+
+  // Draw
+  display.clearDisplay();
+
+  // Bird
+  display.fillCircle(birdX, (int)birdY, 3, WHITE);
+
+  // Top Pipe
+  display.fillRect(pipeX, 0, 10, gapY, WHITE);
+
+  // Bottom Pipe
+  display.fillRect(pipeX,
+                   gapY + 25,
+                   10,
+                   SCREEN_HEIGHT - (gapY + 25),
+                   WHITE);
+
+  // Score
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.print("Score:");
+  display.print(score);
+
+  display.display();
+
+  delay(30);
+}
